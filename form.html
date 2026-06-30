@@ -1,0 +1,1152 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TMOB — UX/UI Designer Başvuru</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --primary: #2563EB;
+      --primary-light: rgba(37, 99, 235, 0.15);
+      --danger: #DC2626;
+      --success: #16A34A;
+      --border: #E5E7EB;
+      --text-primary: #111827;
+      --text-secondary: #6B7280;
+      --bg: #F9FAFB;
+      --card-bg: #FFFFFF;
+      --input-h: 44px;
+      --section-gap: 24px;
+      --field-gap: 16px;
+      --card-padding: 24px;
+    }
+
+    html { font-size: 16px; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      line-height: 1.6;
+      color: var(--text-primary);
+      background: var(--bg);
+      min-height: 100vh;
+    }
+
+    /* ── Layout ── */
+    .app { max-width: 1280px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; }
+    .app-header { position: sticky; top: 0; z-index: 100; background: var(--bg); padding: 16px 16px 0; }
+    @media (min-width: 640px) { .app-header { padding: 24px 24px 0; } }
+
+    /* ── Progress Bar ── */
+    .progress-bar {
+      display: flex; gap: 6px; margin-bottom: 16px;
+    }
+    .progress-bar[role="progressbar"] { outline: none; }
+    .progress-segment {
+      flex: 1; height: 4px; border-radius: 2px;
+      background: var(--border); transition: background 0.3s;
+    }
+    .progress-segment.completed { background: var(--primary); }
+    .progress-segment.active { background: var(--primary); opacity: 0.5; }
+
+    /* ── Step 1 fixed apply button ── */
+    .step1-toolbar {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      margin-bottom: 16px; gap: 16px;
+    }
+    .step1-toolbar .job-title { flex: 1; min-width: 0; }
+    .btn-apply-fixed {
+      position: sticky; top: 52px; z-index: 90; align-self: flex-start;
+      background: var(--primary); color: #fff;
+      border: none; border-radius: 8px;
+      padding: 10px 20px; font-size: 14px; font-weight: 600;
+      cursor: pointer; white-space: nowrap; flex-shrink: 0;
+      transition: background 0.2s;
+    }
+    .btn-apply-fixed:hover { background: #1d4ed8; }
+
+    /* ── Main content ── */
+    .main-content {
+      flex: 1; padding: 0 16px 100px; overflow: hidden;
+    }
+    @media (min-width: 640px) { .main-content { padding: 0 24px 100px; } }
+
+    .step-container { position: relative; }
+    .step-panel {
+      background: var(--card-bg); border: 1px solid var(--border);
+      border-radius: 12px; padding: var(--card-padding);
+      transition: transform 0.35s ease, opacity 0.35s ease;
+    }
+    .step-panel.slide-out-left { transform: translateX(-30px); opacity: 0; }
+    .step-panel.slide-out-right { transform: translateX(30px); opacity: 0; }
+    .step-panel.slide-in-left { animation: slideInLeft 0.35s ease forwards; }
+    .step-panel.slide-in-right { animation: slideInRight 0.35s ease forwards; }
+
+    @keyframes slideInLeft {
+      from { transform: translateX(30px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    @keyframes slideInRight {
+      from { transform: translateX(-30px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    /* ── Typography ── */
+    .step-heading { font-size: 20px; font-weight: 600; margin-bottom: var(--section-gap); }
+    .job-company { font-size: 14px; color: var(--text-secondary); margin-bottom: 4px; }
+    .job-position { font-size: 24px; font-weight: 700; margin-bottom: 0; }
+    .job-meta {
+      margin-bottom: 16px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .meta-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+    }
+    @media (min-width: 640px) {
+      .meta-grid { grid-template-columns: repeat(4, 1fr); gap: 16px; }
+    }
+    .meta-item {
+      display: flex; align-items: flex-start; gap: 10px;
+      min-width: 0;
+    }
+    .meta-icon {
+      width: 36px; height: 36px; flex-shrink: 0;
+      border-radius: 8px; background: var(--primary-light);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--primary);
+    }
+    .meta-icon svg { width: 18px; height: 18px; }
+    .meta-text { min-width: 0; }
+    .meta-label { font-size: 11px; color: var(--text-secondary); font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em; line-height: 1.3; }
+    .meta-value { font-size: 13px; font-weight: 600; color: var(--text-primary); line-height: 1.3; margin-top: 2px; }
+    .section-title { font-size: 16px; font-weight: 600; margin-bottom: 12px; margin-top: var(--section-gap); }
+    .section-body { font-size: 15px; color: var(--text-secondary); white-space: pre-line; line-height: 1.7; }
+
+    /* ── Form ── */
+    .form-grid {
+      display: grid; grid-template-columns: 1fr; gap: var(--field-gap);
+    }
+    @media (min-width: 640px) {
+      .form-grid { grid-template-columns: 1fr 1fr; }
+      .form-grid .full-width { grid-column: 1 / -1; }
+    }
+
+    .field { display: flex; flex-direction: column; gap: 6px; }
+    .field label {
+      font-size: 14px; font-weight: 500; color: var(--text-primary);
+    }
+    .field label .optional { font-weight: 400; color: var(--text-secondary); font-size: 12px; }
+    .field input, .field select, .field textarea {
+      height: var(--input-h); padding: 0 12px;
+      border: 1px solid var(--border); border-radius: 8px;
+      font-size: 16px; font-family: inherit; color: var(--text-primary);
+      background: var(--card-bg); width: 100%;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .field textarea { height: auto; min-height: 100px; padding: 12px; resize: vertical; }
+    .field input:focus, .field select:focus, .field textarea:focus {
+      outline: none; border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-light);
+    }
+    .field input.error, .field select.error, .field textarea.error { border-color: var(--danger); }
+    .field-error {
+      font-size: 12px; color: var(--danger);
+    }
+    .char-counter { font-size: 12px; color: var(--text-secondary); text-align: right; }
+
+    /* ── Radio group ── */
+    .radio-group { display: flex; gap: 16px; flex-wrap: wrap; }
+    .radio-option { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 15px; }
+    .radio-option input[type="radio"] {
+      width: 18px; height: 18px; accent-color: var(--primary); cursor: pointer;
+    }
+
+    /* ── File upload ── */
+    .drop-zone {
+      border: 2px dashed var(--border); border-radius: 12px;
+      padding: 32px 16px; text-align: center; cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      display: none;
+    }
+    @media (min-width: 640px) { .drop-zone { display: block; } }
+    .drop-zone.drag-over { border-color: var(--primary); background: var(--primary-light); }
+    .drop-zone-icon { font-size: 32px; margin-bottom: 8px; }
+    .drop-zone-text { font-size: 14px; color: var(--text-secondary); }
+    .drop-zone-text strong { color: var(--primary); }
+    .file-mobile-btn { display: block; }
+    @media (min-width: 640px) { .file-mobile-btn { display: none; } }
+    .file-info {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px; background: var(--bg); border-radius: 8px; margin-top: 8px;
+      font-size: 14px;
+    }
+    .file-info-name { font-weight: 500; }
+    .file-info-size { color: var(--text-secondary); font-size: 12px; }
+    .file-remove { color: var(--danger); font-size: 13px; cursor: pointer; background: none; border: none; font-family: inherit; text-decoration: underline; }
+
+    /* ── KVKK ── */
+    .kvkk-toggle {
+      background: none; border: none; color: var(--primary);
+      font-size: 14px; font-weight: 500; cursor: pointer;
+      padding: 0; font-family: inherit; margin-bottom: 12px;
+    }
+    .kvkk-text {
+      font-size: 14px; color: var(--text-secondary); line-height: 1.7;
+      max-height: 0; overflow: hidden; transition: max-height 0.4s ease;
+    }
+    .kvkk-text.open { max-height: 600px; margin-bottom: 16px; }
+    .kvkk-text p { margin-bottom: 12px; }
+    .checkbox-field {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 12px 0; cursor: pointer;
+    }
+    .checkbox-field input[type="checkbox"] {
+      width: 18px; height: 18px; margin-top: 2px;
+      accent-color: var(--primary); flex-shrink: 0; cursor: pointer;
+    }
+    .checkbox-field span { font-size: 14px; line-height: 1.5; }
+
+    /* ── Bottom navigation ── */
+    .step-nav {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: var(--card-bg); border-top: 1px solid var(--border);
+      padding: 12px 16px; display: flex; gap: 12px; z-index: 100;
+    }
+    @media (min-width: 640px) {
+      .step-nav { padding: 16px 24px; justify-content: flex-end; }
+      .step-nav .btn { width: auto; min-width: 120px; }
+    }
+    .step-nav .btn { flex: 1; }
+    @media (min-width: 640px) { .step-nav .btn { flex: 0; } }
+
+    .btn {
+      height: var(--input-h); border-radius: 8px;
+      font-size: 15px; font-weight: 600; font-family: inherit;
+      cursor: pointer; border: none; transition: all 0.2s;
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover:not(.btn-disabled) { background: #1d4ed8; }
+    .btn-ghost { background: transparent; color: var(--text-secondary); border: 1px solid var(--border); }
+    .btn-ghost:hover { background: var(--bg); color: var(--text-primary); }
+    .btn-disabled { opacity: 0.45; cursor: not-allowed; }
+    .btn-success { background: var(--success); color: #fff; }
+
+    /* ── Spinner ── */
+    .spinner {
+      width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff; border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Success screen ── */
+    .success-screen {
+      text-align: center; padding: 48px 24px;
+      display: flex; flex-direction: column; align-items: center; gap: 16px;
+    }
+    .success-icon {
+      width: 64px; height: 64px; border-radius: 50%;
+      background: #DCFCE7; color: var(--success);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 32px;
+    }
+    .success-title { font-size: 22px; font-weight: 700; }
+    .success-msg { font-size: 16px; color: var(--text-secondary); max-width: 400px; }
+
+    /* ── Confetti canvas ── */
+    #confetti-canvas {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      pointer-events: none; z-index: 9999;
+    }
+
+    .hidden { display: none !important; }
+
+    /* ── Screening full width fields ── */
+    .screening-grid { display: flex; flex-direction: column; gap: var(--field-gap); }
+  </style>
+</head>
+<body>
+  <div class="app" id="app">
+    <header class="app-header" id="app-header">
+      <div class="progress-bar" id="progress-bar" role="progressbar" aria-valuemin="1" aria-valuemax="5" aria-valuenow="1" aria-label="Başvuru ilerlemesi">
+        <div class="progress-segment active" data-seg="1"></div>
+        <div class="progress-segment" data-seg="2"></div>
+        <div class="progress-segment" data-seg="3"></div>
+        <div class="progress-segment" data-seg="4"></div>
+        <div class="progress-segment" data-seg="5"></div>
+      </div>
+      <div class="step1-toolbar hidden" id="step1-toolbar">
+        <div class="job-title">
+          <p class="job-company">TMOB</p>
+          <h1 class="job-position">UX/UI Designer</h1>
+        </div>
+        <button type="button" class="btn-apply-fixed" id="btn-apply-step1">Başvur</button>
+      </div>
+      <div class="job-meta hidden" id="step1-meta">
+        <div class="meta-grid">
+          <div class="meta-item">
+            <div class="meta-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s7-4.5 7-11a7 7 0 10-14 0c0 6.5 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>
+            </div>
+            <div class="meta-text">
+              <span class="meta-label">Konum</span>
+              <span class="meta-value">İstanbul / Hibrit</span>
+            </div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/></svg>
+            </div>
+            <div class="meta-text">
+              <span class="meta-label">Çalışma Tipi</span>
+              <span class="meta-value">Tam Zamanlı</span>
+            </div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+            </div>
+            <div class="meta-text">
+              <span class="meta-label">Son Başvuru</span>
+              <span class="meta-value">15 Temmuz 2025</span>
+            </div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+            </div>
+            <div class="meta-text">
+              <span class="meta-label">Ücret Aralığı</span>
+              <span class="meta-value">Belirtilmemiş</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="main-content" id="main-content">
+      <div class="step-container" id="step-container"></div>
+    </main>
+
+    <nav class="step-nav hidden" id="step-nav" aria-label="Adım navigasyonu">
+      <button type="button" class="btn btn-ghost" id="btn-back">Geri</button>
+      <button type="button" class="btn btn-primary" id="btn-next">Devam</button>
+    </nav>
+  </div>
+
+  <canvas id="confetti-canvas" class="hidden"></canvas>
+
+  <script>
+    /* ═══════════════════════════════════════════
+       State — reducer pattern
+    ═══════════════════════════════════════════ */
+    const STORAGE_KEY = 'ats_form_draft';
+
+    const initialState = {
+      step: 1,
+      personalInfo: { fullName: '', email: '', phone: '', city: '', linkedin: '' },
+      cvUpload: { fileName: '', fileSize: 0, portfolioUrl: '', coverLetter: '' },
+      screening: { workPermit: '', experience: '', startDate: '', salary: '', intro: '' },
+      kvkk: { mainConsent: false, marketingConsent: false }
+    };
+
+    let state = { ...initialState };
+    let cvFile = null;
+    let errors = {};
+    let touched = {};
+    let animDirection = 'forward';
+    let isSubmitting = false;
+    let showSuccess = false;
+
+    function loadState() {
+      try {
+        const saved = sessionStorage.getItem(STORAGE_KEY);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          state = { ...initialState, ...parsed };
+        }
+      } catch (e) { /* ignore */ }
+    }
+
+    function saveState() {
+      const toSave = {
+        step: state.step,
+        personalInfo: { ...state.personalInfo },
+        cvUpload: { fileName: state.cvUpload.fileName, fileSize: state.cvUpload.fileSize, portfolioUrl: state.cvUpload.portfolioUrl, coverLetter: state.cvUpload.coverLetter },
+        screening: { ...state.screening },
+        kvkk: { ...state.kvkk }
+      };
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
+    }
+
+    function applyAction(action) {
+      switch (action.type) {
+        case 'SET_STEP':
+          state.step = action.step;
+          break;
+        case 'UPDATE_PERSONAL':
+          state.personalInfo = { ...state.personalInfo, ...action.payload };
+          break;
+        case 'UPDATE_CV':
+          state.cvUpload = { ...state.cvUpload, ...action.payload };
+          break;
+        case 'UPDATE_SCREENING':
+          state.screening = { ...state.screening, ...action.payload };
+          break;
+        case 'UPDATE_KVKK':
+          state.kvkk = { ...state.kvkk, ...action.payload };
+          break;
+        case 'RESET':
+          state = { ...initialState };
+          cvFile = null;
+          errors = {};
+          touched = {};
+          sessionStorage.removeItem(STORAGE_KEY);
+          return;
+      }
+      saveState();
+    }
+
+    function dispatch(action) {
+      applyAction(action);
+      if (action.type !== 'RESET') render();
+    }
+
+    function updateFieldError(fieldId, message) {
+      const el = document.getElementById(fieldId);
+      if (!el) return;
+      el.classList.toggle('error', !!message);
+      const field = el.closest('.field');
+      if (!field) return;
+      let errEl = field.querySelector('[data-field-error]') || field.querySelector('.field-error');
+      if (message) {
+        if (!errEl) {
+          errEl = document.createElement('span');
+          errEl.className = 'field-error';
+          errEl.setAttribute('role', 'alert');
+          errEl.setAttribute('aria-live', 'polite');
+          field.appendChild(errEl);
+        }
+        errEl.setAttribute('data-field-error', '');
+        errEl.textContent = message;
+      } else if (errEl) {
+        errEl.remove();
+      }
+    }
+
+    function updateKVKKError(message) {
+      const main = document.getElementById('mainConsent');
+      if (!main) return;
+      const label = main.closest('.checkbox-field');
+      if (!label) return;
+      let errEl = label.nextElementSibling;
+      if (errEl && !errEl.classList.contains('field-error')) errEl = null;
+      if (message) {
+        if (!errEl) {
+          errEl = document.createElement('span');
+          errEl.className = 'field-error';
+          errEl.setAttribute('role', 'alert');
+          errEl.setAttribute('aria-live', 'polite');
+          label.after(errEl);
+        }
+        errEl.textContent = message;
+      } else if (errEl) {
+        errEl.remove();
+      }
+    }
+
+    function updateGroupError(fieldEl, message) {
+      if (!fieldEl) return;
+      let errEl = fieldEl.querySelector('[data-field-error]');
+      if (message) {
+        if (!errEl) {
+          errEl = document.createElement('span');
+          errEl.className = 'field-error';
+          errEl.setAttribute('data-field-error', '');
+          errEl.setAttribute('role', 'alert');
+          errEl.setAttribute('aria-live', 'polite');
+          fieldEl.appendChild(errEl);
+        }
+        errEl.textContent = message;
+      } else if (errEl) {
+        errEl.remove();
+      }
+    }
+
+    function showStepErrors(stepErrors) {
+      Object.entries(stepErrors).forEach(([name, msg]) => {
+        if (name === 'mainConsent') updateKVKKError(msg);
+        else if (name === 'workPermit') {
+          updateGroupError(document.querySelector('input[name="workPermit"]')?.closest('.field'), msg);
+        } else if (name === 'cvFile') {
+          const cvField = document.getElementById('cvFile')?.closest('.field');
+          updateGroupError(cvField, msg);
+        } else {
+          updateFieldError(name, msg);
+        }
+      });
+    }
+
+    /* ═══════════════════════════════════════════
+       Validators
+    ═══════════════════════════════════════════ */
+    const validators = {
+      fullName: (v) => !v.trim() ? 'Ad Soyad zorunludur' : '',
+      email: (v) => {
+        if (!v.trim()) return 'E-posta zorunludur';
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) return 'Geçerli bir e-posta girin';
+        return '';
+      },
+      phone: (v) => {
+        if (!v.trim()) return 'Telefon zorunludur';
+        const cleaned = v.replace(/\s/g, '');
+        if (cleaned.length < 10) return 'Telefon en az 10 karakter olmalı';
+        if (!/^\+90\d{10}$/.test(cleaned) && !/^0\d{10}$/.test(cleaned)) return 'Türkiye formatı: +90XXXXXXXXXX';
+        return '';
+      },
+      city: () => '',
+      linkedin: () => '',
+      cvFile: () => {
+        if (!cvFile && !state.cvUpload.fileName) return 'CV dosyası zorunludur';
+        if (cvFile && cvFile.size > 5 * 1024 * 1024) return 'Dosya 5MB\'dan küçük olmalı';
+        return '';
+      },
+      portfolioUrl: () => '',
+      coverLetter: (v) => v.length > 500 ? 'En fazla 500 karakter' : '',
+      workPermit: (v) => !v ? 'Bu alan zorunludur' : '',
+      experience: (v) => !v ? 'Bu alan zorunludur' : '',
+      startDate: (v) => !v ? 'Bu alan zorunludur' : '',
+      salary: (v) => {
+        if (v && Number(v) < 0) return 'Geçerli bir tutar girin';
+        return '';
+      },
+      intro: (v) => v.length > 200 ? 'En fazla 200 karakter' : '',
+      mainConsent: (v) => !v ? 'KVKK onayı zorunludur' : ''
+    };
+
+    function validateField(field, value) {
+      const fn = validators[field];
+      return fn ? fn(value) : '';
+    }
+
+    function validateStep(step) {
+      const stepErrors = {};
+      if (step === 2) {
+        ['fullName', 'email', 'phone', 'city', 'linkedin'].forEach(f => {
+          const err = validateField(f, state.personalInfo[f]);
+          if (err) stepErrors[f] = err;
+        });
+      }
+      if (step === 3) {
+        const cvErr = validateField('cvFile', null);
+        if (cvErr) stepErrors.cvFile = cvErr;
+        const pErr = validateField('portfolioUrl', state.cvUpload.portfolioUrl);
+        if (pErr) stepErrors.portfolioUrl = pErr;
+        const cErr = validateField('coverLetter', state.cvUpload.coverLetter);
+        if (cErr) stepErrors.coverLetter = cErr;
+      }
+      if (step === 4) {
+        ['workPermit', 'experience', 'startDate'].forEach(f => {
+          const err = validateField(f, state.screening[f]);
+          if (err) stepErrors[f] = err;
+        });
+        const sErr = validateField('salary', state.screening.salary);
+        if (sErr) stepErrors.salary = sErr;
+        const iErr = validateField('intro', state.screening.intro);
+        if (iErr) stepErrors.intro = iErr;
+      }
+      if (step === 5) {
+        const mErr = validateField('mainConsent', state.kvkk.mainConsent);
+        if (mErr) stepErrors.mainConsent = mErr;
+      }
+      return stepErrors;
+    }
+
+    function isStepValid(step) {
+      const errs = validateStep(step);
+      return Object.keys(errs).length === 0;
+    }
+
+    /* ═══════════════════════════════════════════
+       Render helpers
+    ═══════════════════════════════════════════ */
+    function esc(str) {
+      const d = document.createElement('div');
+      d.textContent = str;
+      return d.innerHTML;
+    }
+
+    function fieldError(name) {
+      if (!errors[name]) return '';
+      return `<span class="field-error" role="alert" aria-live="polite">${esc(errors[name])}</span>`;
+    }
+
+    /* ═══════════════════════════════════════════
+       Step templates
+    ═══════════════════════════════════════════ */
+    function renderStep1() {
+      return `
+        <div class="step-panel ${animDirection === 'forward' ? 'slide-in-left' : 'slide-in-right'}">
+          <h2 class="section-title" style="margin-top:0;">Şirket Hakkında</h2>
+          <p class="section-body">TMOB olarak, kullanıcılarımızın hayatını kolaylaştıran dijital ürünler ve estetik çözümler geliştiriyoruz. Büyüyen ekibimize, tasarım süreçlerini yenilikçi yaklaşımlarla optimize edecek, güçlü bir görsel vizyona sahip ve kullanıcı deneyimini en üst seviyeye taşıyacak bir UX/UI Designer arıyoruz!</p>
+          <h2 class="section-title">İş Tanımı ve Sorumluluklar</h2>
+          <p class="section-body">Uçtan Uca Tasarım Süreci: Web ve mobil platformlar için kullanıcı araştırmalarından başlayarak wireframe, prototip ve yüksek sadakatli (high-fidelity) arayüz tasarımlarını hayata geçirmek.
+
+Görsel Vizyon & Estetik: Güçlü bir grafik tasarım vizyonunu UX/UI prensipleriyle birleştirerek, markanın kimliğine uygun, modern ve çarpıcı arayüzler oluşturmak.
+
+İş Birliği & Köprü Görevi: Product, pazarlama ve yazılım geliştirme (Front-end) ekipleriyle yakın çalışarak, tasarımların teknik olarak en doğru ve piksel mükemmelliğinde (pixel-perfect) uygulanmasını sağlamak.
+
+Tasarım Sistemleri (Design Systems): Tasarımda tutarlılığı ve hızı artırmak adına ölçeklenebilir bileşen kütüphaneleri (Design System) ve UI Kit'ler oluşturmak/yönetmek.
+
+Süreç Optimizasyonu: Güncel tasarım trendlerini ve yapay zeka destekli (AI-driven) tasarım/otomasyon araçlarını yakından takip ederek tasarım iş akışlarını daha verimli hale getirmek.</p>
+          <h2 class="section-title">Aranan Nitelikler</h2>
+          <p class="section-body">Deneyim: UX/UI Tasarımı alanında en az 3-5 yıl profesyonel deneyim (Güçlü bir portfolyo sunulması zorunludur).
+
+Araç Yetkinliği: Figma ve Adobe Creative Cloud (Photoshop, Illustrator vb.) uygulamalarına ileri düzeyde hakimiyet.
+
+Metodoloji: Kullanıcı odaklı tasarım (User-Centered Design) metodolojilerine, bilgi mimarisine ve kullanılabilirlik testlerine hakim olmak.
+
+İnovatif Bakış Açısı: Tasarım süreçlerini optimize etmek için yapay zeka araçlarını (Cursor, Midjourney, Claude vb.) iş akışına entegre edebilme vizyonuna sahip olmak veya bu konudaki yeniliklere açık olmak.
+
+İletişim: Tasarım kararlarını veriye ve kullanıcı içgörülerine dayandırarak ekibe ve paydaşlara net bir şekilde aktarabilmek.</p>
+          <h2 class="section-title">Sana Neler Sunuyoruz?</h2>
+          <p class="section-body">Hibrit çalışma modeli
+
+Yenilikçi teknolojileri ve yapay zeka entegrasyonlarını denemek için özgür bir alan
+
+Sürekli öğrenmeyi ve profesyonel gelişimi destekleyen bir ekip kültürü
+
+Özel sağlık sigortası, eğitim bütçesi
+
+Başvuru İçin: Portfolyonu içeren güncel özgeçmişini bizimle paylaşarak bu heyecan verici yolculuğa ortak olabilirsin!</p>
+        </div>`;
+    }
+
+    function renderStep2() {
+      const pi = state.personalInfo;
+      return `
+        <div class="step-panel ${animDirection === 'forward' ? 'slide-in-left' : 'slide-in-right'}">
+          <h2 class="step-heading">Kişisel Bilgiler</h2>
+          <div class="form-grid">
+            <div class="field">
+              <label for="fullName">Ad Soyad</label>
+              <input type="text" id="fullName" name="fullName" placeholder="Emre Yılmaz"
+                value="${esc(pi.fullName)}" aria-required="true"
+                class="${errors.fullName ? 'error' : ''}" autocomplete="name">
+              ${fieldError('fullName')}
+            </div>
+            <div class="field">
+              <label for="email">E-posta</label>
+              <input type="email" id="email" name="email" placeholder="emre@mail.com"
+                value="${esc(pi.email)}" aria-required="true"
+                class="${errors.email ? 'error' : ''}" autocomplete="email">
+              ${fieldError('email')}
+            </div>
+            <div class="field">
+              <label for="phone">Telefon</label>
+              <input type="tel" id="phone" name="phone" placeholder="+90 532 000 00 00"
+                value="${esc(pi.phone)}" aria-required="true"
+                class="${errors.phone ? 'error' : ''}" autocomplete="tel">
+              ${fieldError('phone')}
+            </div>
+            <div class="field">
+              <label for="city">Şehir <span class="optional">(opsiyonel)</span></label>
+              <input type="text" id="city" name="city" placeholder="İstanbul"
+                value="${esc(pi.city)}" autocomplete="address-level2">
+              ${fieldError('city')}
+            </div>
+            <div class="field full-width">
+              <label for="linkedin">LinkedIn URL <span class="optional">(opsiyonel)</span></label>
+              <input type="url" id="linkedin" name="linkedin" placeholder="linkedin.com/in/kullanici"
+                value="${esc(pi.linkedin)}">
+              ${fieldError('linkedin')}
+            </div>
+          </div>
+        </div>`;
+    }
+
+    function renderStep3() {
+      const cv = state.cvUpload;
+      const hasFile = cvFile || cv.fileName;
+      const fileName = cvFile ? cvFile.name : cv.fileName;
+      const fileSize = cvFile ? cvFile.size : cv.fileSize;
+      return `
+        <div class="step-panel ${animDirection === 'forward' ? 'slide-in-left' : 'slide-in-right'}">
+          <h2 class="step-heading">CV Yükleme</h2>
+          <div class="form-grid">
+            <div class="field full-width">
+              <label for="cvFile">CV Dosyası</label>
+              <div class="drop-zone" id="drop-zone">
+                <div class="drop-zone-icon">📄</div>
+                <p class="drop-zone-text">Dosyayı sürükleyip bırakın veya <strong>gözatın</strong></p>
+                <p class="drop-zone-text" style="margin-top:4px;font-size:12px;">PDF, DOC, DOCX — Maks. 5MB</p>
+              </div>
+              <button type="button" class="btn btn-ghost file-mobile-btn" id="btn-file-mobile">Dosya Seç</button>
+              <input type="file" id="cvFile" name="cvFile" accept=".pdf,.doc,.docx" class="hidden" aria-required="true">
+              ${hasFile ? `
+                <div class="file-info" id="file-info">
+                  <div>
+                    <div class="file-info-name">${esc(fileName)}</div>
+                    <div class="file-info-size">${formatFileSize(fileSize)}</div>
+                  </div>
+                  <button type="button" class="file-remove" id="btn-remove-file">Kaldır</button>
+                </div>` : ''}
+              ${fieldError('cvFile')}
+            </div>
+            <div class="field full-width">
+              <label for="portfolioUrl">Portfolio URL <span class="optional">(opsiyonel)</span></label>
+              <input type="url" id="portfolioUrl" name="portfolioUrl" placeholder="behance.net/kullanici"
+                value="${esc(cv.portfolioUrl)}">
+              ${fieldError('portfolioUrl')}
+            </div>
+            <div class="field full-width">
+              <label for="coverLetter">Ön Yazı <span class="optional">(opsiyonel)</span></label>
+              <textarea id="coverLetter" name="coverLetter" maxlength="500" placeholder="Kendinizi kısaca tanıtın...">${esc(cv.coverLetter)}</textarea>
+              <div class="char-counter"><span id="coverLetter-count">${cv.coverLetter.length}</span>/500</div>
+              ${fieldError('coverLetter')}
+            </div>
+          </div>
+        </div>`;
+    }
+
+    function renderStep4() {
+      const s = state.screening;
+      return `
+        <div class="step-panel ${animDirection === 'forward' ? 'slide-in-left' : 'slide-in-right'}">
+          <h2 class="step-heading">Ön Eleme Soruları</h2>
+          <div class="screening-grid">
+            <div class="field">
+              <label>Türkiye'de çalışma izniniz var mı? <span aria-hidden="true">*</span></label>
+              <div class="radio-group" role="radiogroup" aria-required="true">
+                <label class="radio-option">
+                  <input type="radio" name="workPermit" value="evet" ${s.workPermit === 'evet' ? 'checked' : ''}> Evet
+                </label>
+                <label class="radio-option">
+                  <input type="radio" name="workPermit" value="hayir" ${s.workPermit === 'hayir' ? 'checked' : ''}> Hayır
+                </label>
+              </div>
+              ${fieldError('workPermit')}
+            </div>
+            <div class="field">
+              <label for="experience">Kaç yıl UX deneyiminiz var?</label>
+              <select id="experience" name="experience" aria-required="true" class="${errors.experience ? 'error' : ''}">
+                <option value="">Seçiniz</option>
+                <option value="0-1" ${s.experience === '0-1' ? 'selected' : ''}>0-1 yıl</option>
+                <option value="1-3" ${s.experience === '1-3' ? 'selected' : ''}>1-3 yıl</option>
+                <option value="3-5" ${s.experience === '3-5' ? 'selected' : ''}>3-5 yıl</option>
+                <option value="5+" ${s.experience === '5+' ? 'selected' : ''}>5+ yıl</option>
+              </select>
+              ${fieldError('experience')}
+            </div>
+            <div class="field">
+              <label for="startDate">En erken ne zaman başlayabilirsiniz?</label>
+              <select id="startDate" name="startDate" aria-required="true" class="${errors.startDate ? 'error' : ''}">
+                <option value="">Seçiniz</option>
+                <option value="hemen" ${s.startDate === 'hemen' ? 'selected' : ''}>Hemen</option>
+                <option value="2-hafta" ${s.startDate === '2-hafta' ? 'selected' : ''}>2 hafta içinde</option>
+                <option value="1-ay" ${s.startDate === '1-ay' ? 'selected' : ''}>1 ay içinde</option>
+                <option value="1-aydan-fazla" ${s.startDate === '1-aydan-fazla' ? 'selected' : ''}>1 aydan fazla</option>
+              </select>
+              ${fieldError('startDate')}
+            </div>
+            <div class="field">
+              <label for="salary">Maaş beklentiniz? (Aylık net, TL) <span class="optional">(opsiyonel)</span></label>
+              <input type="number" id="salary" name="salary" placeholder="50000" min="0"
+                value="${esc(s.salary)}" class="${errors.salary ? 'error' : ''}">
+              ${fieldError('salary')}
+            </div>
+            <div class="field">
+              <label for="intro">Kendinizi kısaca tanıtın <span class="optional">(opsiyonel, maks. 200 karakter)</span></label>
+              <textarea id="intro" name="intro" maxlength="200" placeholder="Kısa bir tanıtım...">${esc(s.intro)}</textarea>
+              <div class="char-counter"><span id="intro-count">${s.intro.length}</span>/200</div>
+              ${fieldError('intro')}
+            </div>
+          </div>
+        </div>`;
+    }
+
+    function renderStep5() {
+      const k = state.kvkk;
+      return `
+        <div class="step-panel ${animDirection === 'forward' ? 'slide-in-left' : 'slide-in-right'}">
+          <h2 class="step-heading">KVKK Onayı</h2>
+          <button type="button" class="kvkk-toggle" id="kvkk-toggle" aria-expanded="false">Metni oku ▾</button>
+          <div class="kvkk-text" id="kvkk-text">
+            <p>6698 sayılı Kişisel Verilerin Korunması Kanunu ("KVKK") kapsamında, TMOB Teknoloji A.Ş. ("Şirket") olarak kişisel verilerinizin güvenliği hususuna azami hassasiyet göstermekteyiz. Bu aydınlatma metni, başvuru sürecinde toplanan kişisel verilerinizin hangi amaçlarla, hangi hukuki sebeplere dayanılarak işleneceğini açıklamaktadır.</p>
+            <p>Başvuru formu aracılığıyla paylaştığınız ad-soyad, iletişim bilgileri, özgeçmiş, portfolyo bağlantıları ve ön eleme sorularına verdiğiniz yanıtlar; işe alım sürecinin yürütülmesi, aday değerlendirmesi, yetkinlik analizi ve olası işe alım kararlarının verilmesi amaçlarıyla işlenecektir. Verileriniz, KVKK'nın 5. maddesinde belirtilen "sözleşmenin kurulması veya ifası" ile "veri sorumlusunun meşru menfaatleri" hukuki sebeplerine dayanılarak işlenmektedir.</p>
+            <p>Kişisel verileriniz, yalnızca yetkili insan kaynakları personeli ve ilgili yöneticiler tarafından erişilebilir olacak şekilde saklanır. Verileriniz, başvuru sürecinin tamamlanmasının ardından en fazla 2 yıl süreyle muhafaza edilir; bu sürenin sonunda silinir, yok edilir veya anonim hale getirilir. KVKK'nın 11. maddesi kapsamında kişisel verilerinize ilişkin erişim, düzeltme, silme ve itiraz haklarınızı kullanmak için kvkk@tmob.com adresine başvurabilirsiniz.</p>
+          </div>
+          <label class="checkbox-field">
+            <input type="checkbox" id="mainConsent" name="mainConsent" ${k.mainConsent ? 'checked' : ''} aria-required="true">
+            <span>Kişisel verilerimin işlenmesine ilişkin Aydınlatma Metnini okudum ve onaylıyorum.</span>
+          </label>
+          ${fieldError('mainConsent')}
+          <label class="checkbox-field">
+            <input type="checkbox" id="marketingConsent" name="marketingConsent" ${k.marketingConsent ? 'checked' : ''}>
+            <span>Gelecekteki iş fırsatları için benimle iletişime geçilmesine izin veriyorum.</span>
+          </label>
+        </div>`;
+    }
+
+    function renderSuccess() {
+      return `
+        <div class="step-panel slide-in-left">
+          <div class="success-screen">
+            <div class="success-icon">✓</div>
+            <h2 class="success-title">Başvurunuz alındı!</h2>
+            <p class="success-msg">Sizi en kısa sürede arayacağız.</p>
+          </div>
+        </div>`;
+    }
+
+    function formatFileSize(bytes) {
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+      return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    }
+
+    /* ═══════════════════════════════════════════
+       Main render
+    ═══════════════════════════════════════════ */
+    function render() {
+      const container = document.getElementById('step-container');
+      const stepNav = document.getElementById('step-nav');
+      const step1Toolbar = document.getElementById('step1-toolbar');
+      const step1Meta = document.getElementById('step1-meta');
+      const progressBar = document.getElementById('progress-bar');
+
+      if (showSuccess) {
+        container.innerHTML = renderSuccess();
+        stepNav.classList.add('hidden');
+        step1Toolbar.classList.add('hidden');
+        step1Meta.classList.add('hidden');
+        updateProgress(5, true);
+        return;
+      }
+
+      const step = state.step;
+      updateProgress(step);
+
+      step1Toolbar.classList.toggle('hidden', step !== 1);
+      step1Meta.classList.toggle('hidden', step !== 1);
+      stepNav.classList.toggle('hidden', step === 1);
+
+      const panels = { 1: renderStep1, 2: renderStep2, 3: renderStep3, 4: renderStep4, 5: renderStep5 };
+      container.innerHTML = panels[step]();
+
+      updateNavButtons(step);
+      bindStepEvents(step);
+    }
+
+    function updateProgress(current, allDone) {
+      const segments = document.querySelectorAll('.progress-segment');
+      const bar = document.getElementById('progress-bar');
+      bar.setAttribute('aria-valuenow', allDone ? 5 : current);
+      segments.forEach((seg, i) => {
+        seg.className = 'progress-segment';
+        const num = i + 1;
+        if (allDone || num < current) seg.classList.add('completed');
+        else if (num === current) seg.classList.add(allDone ? 'completed' : 'active');
+      });
+    }
+
+    function updateNavButtons(step) {
+      const btnBack = document.getElementById('btn-back');
+      const btnNext = document.getElementById('btn-next');
+
+      btnBack.classList.toggle('hidden', step <= 1);
+      btnBack.style.display = step <= 1 ? 'none' : '';
+
+      if (step === 5) {
+        btnNext.textContent = '';
+        btnNext.innerHTML = isSubmitting
+          ? '<span class="spinner"></span> Gönderiliyor...'
+          : 'Gönder';
+        btnNext.classList.toggle('btn-disabled', !state.kvkk.mainConsent && !isSubmitting);
+        btnNext.classList.toggle('btn-primary', true);
+      } else {
+        btnNext.textContent = 'Devam';
+        btnNext.classList.remove('btn-disabled');
+      }
+    }
+
+    /* ═══════════════════════════════════════════
+       Event binding
+    ═══════════════════════════════════════════ */
+    function bindStepEvents(step) {
+      if (step === 2) bindPersonalInfoEvents();
+      if (step === 3) bindCVUploadEvents();
+      if (step === 4) bindScreeningEvents();
+      if (step === 5) bindKVKKEvents();
+    }
+
+    function bindPersonalInfoEvents() {
+      const fields = ['fullName', 'email', 'phone', 'city', 'linkedin'];
+      fields.forEach(name => {
+        const el = document.getElementById(name);
+        if (!el) return;
+        el.addEventListener('input', () => {
+          applyAction({ type: 'UPDATE_PERSONAL', payload: { [name]: el.value } });
+          if (touched[name]) {
+            errors[name] = validateField(name, el.value);
+            updateFieldError(name, errors[name]);
+          }
+        });
+        el.addEventListener('blur', () => {
+          touched[name] = true;
+          applyAction({ type: 'UPDATE_PERSONAL', payload: { [name]: el.value } });
+          errors[name] = validateField(name, el.value);
+          updateFieldError(name, errors[name]);
+        });
+      });
+    }
+
+    function bindCVUploadEvents() {
+      const fileInput = document.getElementById('cvFile');
+      const dropZone = document.getElementById('drop-zone');
+      const mobileBtn = document.getElementById('btn-file-mobile');
+      const removeBtn = document.getElementById('btn-remove-file');
+
+      function handleFile(file) {
+        if (!file) return;
+        if (file.size > 5 * 1024 * 1024) {
+          errors.cvFile = 'Dosya 5MB\'dan küçük olmalı';
+          cvFile = null;
+          render();
+          return;
+        }
+        cvFile = file;
+        errors.cvFile = '';
+        dispatch({ type: 'UPDATE_CV', payload: { fileName: file.name, fileSize: file.size } });
+      }
+
+      if (fileInput) {
+        fileInput.addEventListener('change', () => {
+          if (fileInput.files[0]) handleFile(fileInput.files[0]);
+        });
+      }
+      if (dropZone) {
+        dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+        dropZone.addEventListener('drop', (e) => {
+          e.preventDefault();
+          dropZone.classList.remove('drag-over');
+          if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+        });
+      }
+      if (mobileBtn) mobileBtn.addEventListener('click', () => fileInput.click());
+      if (removeBtn) removeBtn.addEventListener('click', () => {
+        cvFile = null;
+        errors.cvFile = '';
+        dispatch({ type: 'UPDATE_CV', payload: { fileName: '', fileSize: 0 } });
+      });
+
+      const portfolio = document.getElementById('portfolioUrl');
+      if (portfolio) {
+        portfolio.addEventListener('input', () => {
+          applyAction({ type: 'UPDATE_CV', payload: { portfolioUrl: portfolio.value } });
+        });
+        portfolio.addEventListener('blur', () => {
+          errors.portfolioUrl = validateField('portfolioUrl', portfolio.value);
+          updateFieldError('portfolioUrl', errors.portfolioUrl);
+        });
+      }
+      const cover = document.getElementById('coverLetter');
+      if (cover) {
+        cover.addEventListener('input', () => {
+          applyAction({ type: 'UPDATE_CV', payload: { coverLetter: cover.value } });
+          const counter = document.getElementById('coverLetter-count');
+          if (counter) counter.textContent = cover.value.length;
+        });
+      }
+    }
+
+    function bindScreeningEvents() {
+      document.querySelectorAll('input[name="workPermit"]').forEach(r => {
+        r.addEventListener('change', () => {
+          if (r.checked) {
+            applyAction({ type: 'UPDATE_SCREENING', payload: { workPermit: r.value } });
+            errors.workPermit = '';
+            updateGroupError(document.querySelector('input[name="workPermit"]')?.closest('.field'), '');
+          }
+        });
+      });
+      ['experience', 'startDate', 'salary'].forEach(name => {
+        const el = document.getElementById(name);
+        if (!el) return;
+        el.addEventListener('change', () => {
+          applyAction({ type: 'UPDATE_SCREENING', payload: { [name]: el.value } });
+          errors[name] = validateField(name, el.value);
+          updateFieldError(name, errors[name]);
+        });
+        el.addEventListener('blur', () => {
+          errors[name] = validateField(name, el.value);
+          updateFieldError(name, errors[name]);
+        });
+      });
+      const intro = document.getElementById('intro');
+      if (intro) {
+        intro.addEventListener('input', () => {
+          applyAction({ type: 'UPDATE_SCREENING', payload: { intro: intro.value } });
+          const counter = document.getElementById('intro-count');
+          if (counter) counter.textContent = intro.value.length;
+        });
+      }
+    }
+
+    function bindKVKKEvents() {
+      const toggle = document.getElementById('kvkk-toggle');
+      const text = document.getElementById('kvkk-text');
+      if (toggle) {
+        toggle.addEventListener('click', () => {
+          const open = text.classList.toggle('open');
+          toggle.setAttribute('aria-expanded', open);
+          toggle.textContent = open ? 'Metni gizle ▴' : 'Metni oku ▾';
+        });
+      }
+      const main = document.getElementById('mainConsent');
+      if (main) {
+        main.addEventListener('change', () => {
+          applyAction({ type: 'UPDATE_KVKK', payload: { mainConsent: main.checked } });
+          errors.mainConsent = main.checked ? '' : 'KVKK onayı zorunludur';
+          updateKVKKError(errors.mainConsent);
+          updateNavButtons(5);
+        });
+      }
+      const marketing = document.getElementById('marketingConsent');
+      if (marketing) {
+        marketing.addEventListener('change', () => {
+          applyAction({ type: 'UPDATE_KVKK', payload: { marketingConsent: marketing.checked } });
+        });
+      }
+    }
+
+    /* ═══════════════════════════════════════════
+       Navigation
+    ═══════════════════════════════════════════ */
+    function goToStep(target) {
+      animDirection = target > state.step ? 'forward' : 'backward';
+      dispatch({ type: 'SET_STEP', step: target });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function handleNext() {
+      const step = state.step;
+      if (step === 1) { goToStep(2); return; }
+
+      const stepErrors = validateStep(step);
+      if (Object.keys(stepErrors).length > 0) {
+        errors = { ...errors, ...stepErrors };
+        Object.keys(stepErrors).forEach(k => touched[k] = true);
+        showStepErrors(stepErrors);
+        return;
+      }
+
+      if (step === 5) {
+        handleSubmit();
+        return;
+      }
+      goToStep(step + 1);
+    }
+
+    function handleBack() {
+      if (state.step > 1) goToStep(state.step - 1);
+    }
+
+    function handleSubmit() {
+      errors = validateStep(5);
+      if (!state.kvkk.mainConsent) {
+        errors.mainConsent = 'KVKK onayı zorunludur';
+        updateKVKKError(errors.mainConsent);
+        return;
+      }
+
+      isSubmitting = true;
+      render();
+
+      setTimeout(() => {
+        const output = {
+          personalInfo: { ...state.personalInfo },
+          cvUpload: {
+            fileName: cvFile ? cvFile.name : state.cvUpload.fileName,
+            fileSize: cvFile ? cvFile.size : state.cvUpload.fileSize,
+            portfolioUrl: state.cvUpload.portfolioUrl,
+            coverLetter: state.cvUpload.coverLetter
+          },
+          screening: { ...state.screening },
+          kvkk: { ...state.kvkk },
+          submittedAt: new Date().toISOString()
+        };
+        console.log('ATS Form Submission:', JSON.stringify(output, null, 2));
+
+        isSubmitting = false;
+        showSuccess = true;
+        sessionStorage.removeItem(STORAGE_KEY);
+        render();
+        launchConfetti();
+      }, 1500);
+    }
+
+    /* ═══════════════════════════════════════════
+       Confetti
+    ═══════════════════════════════════════════ */
+    function launchConfetti() {
+      const canvas = document.getElementById('confetti-canvas');
+      canvas.classList.remove('hidden');
+      const ctx = canvas.getContext('2d');
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+
+      const colors = ['#2563EB', '#16A34A', '#F59E0B', '#EC4899', '#8B5CF6'];
+      const particles = Array.from({ length: 120 }, () => ({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height - canvas.height,
+        w: Math.random() * 10 + 5,
+        h: Math.random() * 6 + 4,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        vx: Math.random() * 4 - 2,
+        vy: Math.random() * 3 + 2,
+        rot: Math.random() * 360,
+        vr: Math.random() * 10 - 5
+      }));
+
+      let frame = 0;
+      function animate() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        particles.forEach(p => {
+          p.x += p.vx;
+          p.y += p.vy;
+          p.rot += p.vr;
+          p.vy += 0.05;
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          ctx.rotate(p.rot * Math.PI / 180);
+          ctx.fillStyle = p.color;
+          ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+          ctx.restore();
+        });
+        frame++;
+        if (frame < 180) requestAnimationFrame(animate);
+        else canvas.classList.add('hidden');
+      }
+      animate();
+    }
+
+    /* ═══════════════════════════════════════════
+       Init
+    ═══════════════════════════════════════════ */
+    loadState();
+    render();
+
+    document.getElementById('btn-apply-step1').addEventListener('click', () => {
+      animDirection = 'forward';
+      goToStep(2);
+    });
+    document.getElementById('btn-next').addEventListener('click', handleNext);
+    document.getElementById('btn-back').addEventListener('click', handleBack);
+  </script>
+</body>
+</html>

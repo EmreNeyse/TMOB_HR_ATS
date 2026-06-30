@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TMOB — ATS Kanban Pipeline</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --primary: #2563EB;
+      --primary-light: rgba(37, 99, 235, 0.1);
+      --danger: #DC2626;
+      --danger-bg: #FEF2F2;
+      --warning: #D97706;
+      --warning-bg: #FFFBEB;
+      --success: #16A34A;
+      --success-bg: #F0FDF4;
+      --border: #E5E7EB;
+      --text-primary: #111827;
+      --text-secondary: #6B7280;
+      --bg: #F3F4F6;
+      --card-bg: #FFFFFF;
+      --sidebar-w: 360px;
+      --header-h: 65px;
+    }
+
+    html { font-size: 16px; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      line-height: 1.5;
+      color: var(--text-primary);
+      background: var(--bg);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── Header ── */
+    .header {
+      background: var(--card-bg);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+    .header-info { min-width: 0; flex: 1; }
+    .header-title { font-size: 18px; font-weight: 600; }
+    .header-sub { font-size: 13px; color: var(--text-secondary); margin-top: 2px; }
+    .header-badge {
+      font-size: 13px; color: var(--text-secondary);
+      background: var(--bg); padding: 6px 12px; border-radius: 20px;
+      border: 1px solid var(--border);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    /* ── Mobile stage nav ── */
+    .stage-nav {
+      display: none;
+      gap: 8px;
+      padding: 10px 12px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      background: var(--card-bg);
+      border-bottom: 1px solid var(--border);
+      scrollbar-width: none;
+    }
+    .stage-nav::-webkit-scrollbar { display: none; }
+    .stage-nav-btn {
+      flex-shrink: 0;
+      padding: 8px 14px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: var(--card-bg);
+      font-size: 12px;
+      font-weight: 600;
+      font-family: inherit;
+      color: var(--text-secondary);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+    .stage-nav-btn.active {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #fff;
+    }
+    .stage-nav-btn .nav-count {
+      display: inline-block;
+      margin-left: 4px;
+      opacity: 0.85;
+    }
+
+    .mobile-hint {
+      display: none;
+      font-size: 12px;
+      color: var(--text-secondary);
+      text-align: center;
+      padding: 0 16px 8px;
+    }
+
+    /* ── Layout ── */
+    .board-wrap {
+      display: flex;
+      height: calc(100vh - var(--header-h));
+      overflow: hidden;
+    }
+    .board {
+      flex: 1;
+      display: flex;
+      gap: 12px;
+      padding: 16px;
+      overflow-x: auto;
+      overflow-y: hidden;
+      -webkit-overflow-scrolling: touch;
+      scroll-behavior: smooth;
+    }
+
+    /* ── Column ── */
+    .column {
+      flex: 0 0 260px;
+      display: flex;
+      flex-direction: column;
+      max-height: 100%;
+    }
+    .column-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      margin-bottom: 10px;
+    }
+    .column-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-primary);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .column-count {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 2px 8px;
+      min-width: 24px;
+      text-align: center;
+    }
+    .column-body {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 4px;
+      min-height: 140px;
+      border-radius: 8px;
+      transition: background 0.2s, outline 0.2s;
+    }
+    .column-body.drag-over {
+      background: var(--primary-light);
+      outline: 2px dashed var(--primary);
+      outline-offset: -2px;
+    }
+    .column-body::-webkit-scrollbar { width: 4px; }
+    .column-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    /* Column accent colors */
+    .column[data-stage="ilk-basvuru"] .column-header { border-left: 3px solid #6366F1; padding-left: 9px; }
+    .column[data-stage="telefon"] .column-header { border-left: 3px solid #2563EB; padding-left: 9px; }
+    .column[data-stage="teknik"] .column-header { border-left: 3px solid #0891B2; padding-left: 9px; }
+    .column[data-stage="teklif"] .column-header { border-left: 3px solid #D97706; padding-left: 9px; }
+    .column[data-stage="ise-alindi"] .column-header { border-left: 3px solid #16A34A; padding-left: 9px; }
+
+    /* ── Card ── */
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      cursor: grab;
+      transition: box-shadow 0.2s, border-color 0.2s, transform 0.15s, opacity 0.2s;
+      user-select: none;
+    }
+    .card:hover {
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      border-color: #CBD5E1;
+      transform: translateY(-1px);
+    }
+    .card.dragging {
+      opacity: 0.45;
+      cursor: grabbing;
+      transform: rotate(2deg);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+    }
+    .card.selected {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px var(--primary-light);
+    }
+    .card-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .card-name {
+      font-size: 14px;
+      font-weight: 600;
+      line-height: 1.3;
+    }
+    .card-position {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+    .score-badge {
+      flex-shrink: 0;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 20px;
+      line-height: 1.4;
+    }
+    .score-high { background: var(--success-bg); color: var(--success); }
+    .score-mid { background: var(--warning-bg); color: var(--warning); }
+    .score-low { background: var(--danger-bg); color: var(--danger); }
+
+    .card-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 4px;
+    }
+    .card-date {
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+    .source-icon {
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+      background: var(--bg);
+    }
+    .source-icon svg { width: 14px; height: 14px; }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: var(--sidebar-w);
+      flex-shrink: 0;
+      background: var(--card-bg);
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      transform: translateX(100%);
+      transition: transform 0.3s ease;
+      position: fixed;
+      right: 0;
+      top: var(--header-h);
+      height: calc(100vh - var(--header-h));
+      height: calc(100dvh - var(--header-h));
+      z-index: 40;
+      box-shadow: -4px 0 24px rgba(0,0,0,0.06);
+    }
+    .sidebar.open { transform: translateX(0); }
+
+    .sidebar-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .sidebar-header h2 { font-size: 15px; font-weight: 600; }
+    .sidebar-close {
+      background: none; border: none; cursor: pointer;
+      width: 32px; height: 32px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--text-secondary);
+      transition: background 0.15s;
+    }
+    .sidebar-close:hover { background: var(--bg); }
+
+    .sidebar-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+    }
+
+    .avatar {
+      width: 72px; height: 72px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #E0E7FF, #DBEAFE);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px; font-weight: 700; color: var(--primary);
+      margin: 0 auto 16px;
+      border: 2px solid var(--border);
+    }
+    .sidebar-name {
+      text-align: center;
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .sidebar-position {
+      text-align: center;
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 16px;
+    }
+    .sidebar-score-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+    .sidebar-score-label { font-size: 13px; color: var(--text-secondary); }
+
+    .detail-section { margin-bottom: 20px; }
+    .detail-section-title {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-secondary);
+      margin-bottom: 10px;
+    }
+    .detail-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 14px;
+    }
+    .detail-row:last-child { border-bottom: none; }
+    .detail-icon {
+      width: 32px; height: 32px;
+      border-radius: 8px;
+      background: var(--bg);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      color: var(--text-secondary);
+    }
+    .detail-icon svg { width: 16px; height: 16px; }
+    .detail-label { font-size: 11px; color: var(--text-secondary); }
+    .detail-value { font-size: 13px; font-weight: 500; word-break: break-all; }
+
+    .stage-pill {
+      display: inline-block;
+      font-size: 12px;
+      font-weight: 500;
+      padding: 4px 10px;
+      border-radius: 20px;
+      background: var(--primary-light);
+      color: var(--primary);
+    }
+
+    .sidebar-footer {
+      padding: 16px 20px;
+      padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+      border-top: 1px solid var(--border);
+    }
+    .btn-advance {
+      width: 100%;
+      height: 44px;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn-advance:hover { background: #1d4ed8; }
+    .btn-advance:disabled {
+      background: var(--border);
+      color: var(--text-secondary);
+      cursor: not-allowed;
+    }
+
+    .sidebar-empty {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+      color: var(--text-secondary);
+      text-align: center;
+      font-size: 14px;
+    }
+    .sidebar-empty svg { width: 48px; height: 48px; margin-bottom: 12px; opacity: 0.4; }
+
+    .stage-select {
+      width: 100%;
+      height: 44px;
+      padding: 0 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: inherit;
+      color: var(--text-primary);
+      background: var(--card-bg);
+    }
+    .stage-select:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-light);
+    }
+
+    .overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.2);
+      z-index: 30;
+    }
+    .overlay.visible { display: block; }
+
+    /* ── Tablet ── */
+    @media (max-width: 1024px) {
+      .column { flex: 0 0 240px; }
+    }
+
+    /* ── Mobile ── */
+    @media (max-width: 768px) {
+      :root { --header-h: 56px; }
+
+      .header {
+        padding: 12px 16px;
+        padding-top: calc(12px + env(safe-area-inset-top, 0px));
+      }
+      .header-title { font-size: 15px; line-height: 1.3; }
+      .header-sub { font-size: 12px; }
+      .header-badge { font-size: 12px; padding: 5px 10px; }
+
+      .stage-nav { display: flex; }
+      .mobile-hint { display: block; }
+
+      .board-wrap {
+        height: calc(100dvh - var(--header-h) - 88px);
+        flex-direction: column;
+      }
+      .board {
+        flex: 1;
+        padding: 12px;
+        gap: 10px;
+        scroll-snap-type: x mandatory;
+        scroll-padding-inline: 12px;
+      }
+      .column {
+        flex: 0 0 calc(100vw - 40px);
+        max-width: 340px;
+        scroll-snap-align: center;
+        max-height: 100%;
+      }
+      .column-title { font-size: 12px; }
+      .column-body { min-height: 100px; }
+
+      .card { padding: 14px; touch-action: pan-y; }
+      .card:hover { transform: none; box-shadow: none; border-color: var(--border); }
+      .card:active { background: #FAFAFA; }
+
+      .sidebar {
+        top: auto;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        width: 100%;
+        height: auto;
+        max-height: 88dvh;
+        transform: translateY(100%);
+        border-left: none;
+        border-top: 1px solid var(--border);
+        border-radius: 16px 16px 0 0;
+        box-shadow: 0 -8px 32px rgba(0,0,0,0.12);
+      }
+      .sidebar.open { transform: translateY(0); }
+
+      .sidebar-header {
+        padding: 14px 16px;
+        position: relative;
+      }
+      .sidebar-header::before {
+        content: '';
+        position: absolute;
+        top: 8px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 36px;
+        height: 4px;
+        background: var(--border);
+        border-radius: 2px;
+      }
+      .sidebar-body { padding: 16px; }
+      .sidebar-footer { padding: 12px 16px; padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
+
+      .btn-advance { height: 48px; font-size: 15px; }
+    }
+
+    @media (max-width: 380px) {
+      .column { flex: 0 0 calc(100vw - 24px); }
+      .board { padding: 8px; }
+      .stage-nav-btn { padding: 7px 12px; font-size: 11px; }
+    }
+
+    @media (hover: hover) {
+      .card:hover {
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        border-color: #CBD5E1;
+        transform: translateY(-1px);
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="header">
+    <div class="header-info">
+      <div class="header-title">ATS Pipeline — UX/UI Designer</div>
+      <div class="header-sub">TMOB · Aktif aday havuzu</div>
+    </div>
+    <span class="header-badge" id="total-count">0 aday</span>
+  </header>
+
+  <nav class="stage-nav" id="stage-nav" aria-label="Aşama navigasyonu"></nav>
+  <p class="mobile-hint">Sütunlar arasında kaydırın veya üstteki sekmeleri kullanın</p>
+
+  <div class="board-wrap">
+    <div class="board" id="board"></div>
+
+    <aside class="sidebar" id="sidebar" aria-label="Aday detay paneli">
+      <div class="sidebar-header">
+        <h2>Aday Detayı</h2>
+        <button type="button" class="sidebar-close" id="sidebar-close" aria-label="Paneli kapat">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div id="sidebar-content">
+        <div class="sidebar-empty">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+          Detay görmek için bir aday kartına tıklayın
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <div class="overlay" id="overlay"></div>
+
+  <script>
+    const STAGES = [
+      { id: 'ilk-basvuru', label: 'İlk Başvuru' },
+      { id: 'telefon', label: 'Telefon' },
+      { id: 'teknik', label: 'Teknik Mülakat' },
+      { id: 'teklif', label: 'Teklif' },
+      { id: 'ise-alindi', label: 'İşe Alındı' }
+    ];
+
+    let candidates = [
+      { id: 1, name: 'Elif Kaya', position: 'UX/UI Designer', score: 92, source: 'linkedin', lastActivity: '2025-06-28', email: 'elif.kaya@mail.com', phone: '+90 532 111 22 33', stage: 'ilk-basvuru' },
+      { id: 2, name: 'Burak Demir', position: 'UX/UI Designer', score: 78, source: 'direct', lastActivity: '2025-06-27', email: 'burak.d@mail.com', phone: '+90 533 222 33 44', stage: 'ilk-basvuru' },
+      { id: 3, name: 'Zeynep Arslan', position: 'UX/UI Designer', score: 65, source: 'linkedin', lastActivity: '2025-06-26', email: 'zeynep.a@mail.com', phone: '+90 534 333 44 55', stage: 'ilk-basvuru' },
+      { id: 4, name: 'Emre Yılmaz', position: 'UX/UI Designer', score: 88, source: 'direct', lastActivity: '2025-06-28', email: 'emre@mail.com', phone: '+90 535 444 55 66', stage: 'telefon' },
+      { id: 5, name: 'Selin Öztürk', position: 'UX/UI Designer', score: 71, source: 'linkedin', lastActivity: '2025-06-25', email: 'selin.o@mail.com', phone: '+90 536 555 66 77', stage: 'telefon' },
+      { id: 6, name: 'Can Aydın', position: 'UX/UI Designer', score: 54, source: 'direct', lastActivity: '2025-06-24', email: 'can.aydin@mail.com', phone: '+90 537 666 77 88', stage: 'telefon' },
+      { id: 7, name: 'Deniz Çelik', position: 'UX/UI Designer', score: 95, source: 'linkedin', lastActivity: '2025-06-28', email: 'deniz.c@mail.com', phone: '+90 538 777 88 99', stage: 'teknik' },
+      { id: 8, name: 'Ayşe Koç', position: 'UX/UI Designer', score: 82, source: 'linkedin', lastActivity: '2025-06-27', email: 'ayse.koc@mail.com', phone: '+90 539 888 99 00', stage: 'teknik' },
+      { id: 9, name: 'Murat Şahin', position: 'UX/UI Designer', score: 38, source: 'direct', lastActivity: '2025-06-23', email: 'murat.s@mail.com', phone: '+90 540 999 00 11', stage: 'teknik' },
+      { id: 10, name: 'Gizem Yıldız', position: 'UX/UI Designer', score: 90, source: 'linkedin', lastActivity: '2025-06-28', email: 'gizem.y@mail.com', phone: '+90 541 000 11 22', stage: 'teklif' },
+      { id: 11, name: 'Kerem Acar', position: 'UX/UI Designer', score: 76, source: 'direct', lastActivity: '2025-06-26', email: 'kerem.a@mail.com', phone: '+90 542 111 22 33', stage: 'teklif' },
+      { id: 12, name: 'Pınar Güneş', position: 'UX/UI Designer', score: 97, source: 'linkedin', lastActivity: '2025-06-28', email: 'pinar.g@mail.com', phone: '+90 543 222 33 44', stage: 'ise-alindi' },
+      { id: 13, name: 'Oğuz Kılıç', position: 'UX/UI Designer', score: 84, source: 'direct', lastActivity: '2025-06-27', email: 'oguz.k@mail.com', phone: '+90 544 333 44 55', stage: 'ise-alindi' }
+    ];
+
+    let selectedId = null;
+    let suppressClick = false;
+    let activeStageNav = STAGES[0].id;
+    let touchDrag = { card: null, moved: false, startX: 0, startY: 0 };
+
+    function scoreClass(score) {
+      if (score >= 70) return 'score-high';
+      if (score >= 40) return 'score-mid';
+      return 'score-low';
+    }
+
+    function formatDate(iso) {
+      const d = new Date(iso + 'T00:00:00');
+      return d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', year: 'numeric' });
+    }
+
+    function initials(name) {
+      return name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+    }
+
+    function sourceIcon(source) {
+      if (source === 'linkedin') {
+        return `<span class="source-icon" title="LinkedIn">
+          <svg viewBox="0 0 24 24" fill="#0A66C2"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.062 2.062 0 114.126 0 2.062 2.062 0 01-2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+        </span>`;
+      }
+      return `<span class="source-icon" title="Direkt başvuru">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="2"><path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+      </span>`;
+    }
+
+    function renderCard(c) {
+      const selected = c.id === selectedId ? ' selected' : '';
+      return `
+        <article class="card${selected}" data-id="${c.id}" draggable="true" tabindex="0" role="button" aria-label="${c.name}, AI skoru ${c.score}, sürükleyerek taşıyabilirsiniz">
+          <div class="card-top">
+            <div>
+              <div class="card-name">${c.name}</div>
+              <div class="card-position">${c.position}</div>
+            </div>
+            <span class="score-badge ${scoreClass(c.score)}">${c.score}</span>
+          </div>
+          <div class="card-footer">
+            <span class="card-date">${formatDate(c.lastActivity)}</span>
+            ${sourceIcon(c.source)}
+          </div>
+        </article>`;
+    }
+
+    function renderBoard() {
+      const board = document.getElementById('board');
+      board.innerHTML = STAGES.map(stage => {
+        const stageCandidates = candidates.filter(c => c.stage === stage.id);
+        return `
+          <div class="column" data-stage="${stage.id}">
+            <div class="column-header">
+              <span class="column-title">${stage.label}</span>
+              <span class="column-count">${stageCandidates.length}</span>
+            </div>
+            <div class="column-body" data-stage="${stage.id}">
+              ${stageCandidates.map(renderCard).join('')}
+            </div>
+          </div>`;
+      }).join('');
+
+      document.getElementById('total-count').textContent = `${candidates.length} aday`;
+
+      renderStageNav();
+      bindCardEvents(board);
+      bindDragDrop(board);
+      bindTouchDrag(board);
+      syncStageNavHighlight();
+    }
+
+    function renderStageNav() {
+      const nav = document.getElementById('stage-nav');
+      nav.innerHTML = STAGES.map(stage => {
+        const count = candidates.filter(c => c.stage === stage.id).length;
+        return `<button type="button" class="stage-nav-btn${stage.id === activeStageNav ? ' active' : ''}" data-stage="${stage.id}">${stage.label}<span class="nav-count">${count}</span></button>`;
+      }).join('');
+
+      nav.querySelectorAll('.stage-nav-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          activeStageNav = btn.dataset.stage;
+          nav.querySelectorAll('.stage-nav-btn').forEach(b => b.classList.toggle('active', b === btn));
+          const col = document.querySelector(`.column[data-stage="${btn.dataset.stage}"]`);
+          col?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+        });
+      });
+    }
+
+    function syncStageNavHighlight() {
+      const nav = document.getElementById('stage-nav');
+      if (!nav) return;
+      nav.querySelectorAll('.stage-nav-btn').forEach(btn => {
+        const count = candidates.filter(c => c.stage === btn.dataset.stage).length;
+        const countEl = btn.querySelector('.nav-count');
+        if (countEl) countEl.textContent = count;
+        btn.classList.toggle('active', btn.dataset.stage === activeStageNav);
+      });
+    }
+
+    function bindBoardScrollSpy() {
+      const board = document.getElementById('board');
+      if (board._scrollSpyBound) return;
+      board._scrollSpyBound = true;
+      let scrollTimer;
+      board.addEventListener('scroll', () => {
+        clearTimeout(scrollTimer);
+        scrollTimer = setTimeout(() => {
+          if (window.innerWidth > 768) return;
+          const boardRect = board.getBoundingClientRect();
+          const center = boardRect.left + boardRect.width / 2;
+          let closest = null;
+          let minDist = Infinity;
+          board.querySelectorAll('.column').forEach(col => {
+            const rect = col.getBoundingClientRect();
+            const colCenter = rect.left + rect.width / 2;
+            const dist = Math.abs(center - colCenter);
+            if (dist < minDist) { minDist = dist; closest = col; }
+          });
+          if (closest) {
+            activeStageNav = closest.dataset.stage;
+            syncStageNavHighlight();
+          }
+        }, 80);
+      }, { passive: true });
+    }
+
+    function bindTouchDrag(board) {
+      board.querySelectorAll('.card').forEach(card => {
+        card.addEventListener('touchstart', (e) => {
+          if (e.touches.length !== 1) return;
+          touchDrag.card = card;
+          touchDrag.moved = false;
+          touchDrag.startX = e.touches[0].clientX;
+          touchDrag.startY = e.touches[0].clientY;
+        }, { passive: true });
+
+        card.addEventListener('touchmove', (e) => {
+          if (!touchDrag.card || touchDrag.card !== card) return;
+          const dx = Math.abs(e.touches[0].clientX - touchDrag.startX);
+          const dy = Math.abs(e.touches[0].clientY - touchDrag.startY);
+          if (dx > 12 || dy > 12) {
+            touchDrag.moved = true;
+            suppressClick = true;
+            card.classList.add('dragging');
+            const el = document.elementFromPoint(e.touches[0].clientX, e.touches[0].clientY);
+            const col = el?.closest('.column-body');
+            board.querySelectorAll('.column-body').forEach(c => c.classList.toggle('drag-over', c === col));
+            if (dx > dy) e.preventDefault();
+          }
+        }, { passive: false });
+
+        card.addEventListener('touchend', (e) => {
+          if (!touchDrag.card || touchDrag.card !== card) return;
+          const touch = e.changedTouches[0];
+          if (touchDrag.moved) {
+            const el = document.elementFromPoint(touch.clientX, touch.clientY);
+            const col = el?.closest('.column-body');
+            if (col) moveCandidate(Number(card.dataset.id), col.dataset.stage);
+          }
+          card.classList.remove('dragging');
+          board.querySelectorAll('.column-body').forEach(c => c.classList.remove('drag-over'));
+          touchDrag.card = null;
+          setTimeout(() => { suppressClick = false; }, 120);
+        });
+
+        card.addEventListener('touchcancel', () => {
+          card.classList.remove('dragging');
+          touchDrag.card = null;
+          touchDrag.moved = false;
+        });
+      });
+    }
+    function bindCardEvents(board) {
+      board.querySelectorAll('.card').forEach(card => {
+        card.addEventListener('click', () => {
+          if (suppressClick) return;
+          selectCandidate(Number(card.dataset.id));
+        });
+        card.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            selectCandidate(Number(card.dataset.id));
+          }
+        });
+      });
+    }
+
+    function bindDragDrop(board) {
+      board.querySelectorAll('.card').forEach(card => {
+        card.addEventListener('dragstart', (e) => {
+          suppressClick = true;
+          card.classList.add('dragging');
+          e.dataTransfer.setData('text/plain', card.dataset.id);
+          e.dataTransfer.effectAllowed = 'move';
+        });
+        card.addEventListener('dragend', () => {
+          card.classList.remove('dragging');
+          board.querySelectorAll('.column-body').forEach(col => col.classList.remove('drag-over'));
+          setTimeout(() => { suppressClick = false; }, 100);
+        });
+      });
+
+      board.querySelectorAll('.column-body').forEach(col => {
+        col.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+        });
+        col.addEventListener('dragenter', (e) => {
+          e.preventDefault();
+          col.classList.add('drag-over');
+        });
+        col.addEventListener('dragleave', (e) => {
+          if (!col.contains(e.relatedTarget)) col.classList.remove('drag-over');
+        });
+        col.addEventListener('drop', (e) => {
+          e.preventDefault();
+          col.classList.remove('drag-over');
+          const id = Number(e.dataTransfer.getData('text/plain'));
+          const stageId = col.dataset.stage;
+          moveCandidate(id, stageId);
+        });
+      });
+    }
+
+    function moveCandidate(id, newStage) {
+      const c = candidates.find(x => x.id === id);
+      if (!c || c.stage === newStage) return;
+      c.stage = newStage;
+      c.lastActivity = new Date().toISOString().slice(0, 10);
+      activeStageNav = newStage;
+      renderBoard();
+      if (selectedId === id) renderSidebar(c);
+      const col = document.querySelector(`.column[data-stage="${newStage}"]`);
+      if (window.innerWidth <= 768) {
+        col?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+      }
+    }
+
+    function getStageLabel(stageId) {
+      return STAGES.find(s => s.id === stageId)?.label || stageId;
+    }
+
+    function getNextStage(stageId) {
+      const idx = STAGES.findIndex(s => s.id === stageId);
+      return idx < STAGES.length - 1 ? STAGES[idx + 1] : null;
+    }
+
+    function renderSidebar(c) {
+      const next = getNextStage(c.stage);
+      const content = document.getElementById('sidebar-content');
+      content.innerHTML = `
+        <div class="sidebar-body">
+          <div class="avatar" aria-hidden="true">${initials(c.name)}</div>
+          <div class="sidebar-name">${c.name}</div>
+          <div class="sidebar-position">${c.position}</div>
+          <div class="sidebar-score-row">
+            <span class="sidebar-score-label">AI Uyum Skoru</span>
+            <span class="score-badge ${scoreClass(c.score)}">${c.score}/100</span>
+          </div>
+
+          <div class="detail-section">
+            <div class="detail-section-title">Durum</div>
+            <span class="stage-pill">${getStageLabel(c.stage)}</span>
+            <label for="stage-select" class="detail-section-title" style="margin-top:14px;display:block;">Aşamaya Taşı</label>
+            <select id="stage-select" class="stage-select" aria-label="Aday aşamasını değiştir">
+              ${STAGES.map(s => `<option value="${s.id}"${s.id === c.stage ? ' selected' : ''}>${s.label}</option>`).join('')}
+            </select>
+          </div>
+
+          <div class="detail-section">
+            <div class="detail-section-title">İletişim</div>
+            <div class="detail-row">
+              <div class="detail-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+              </div>
+              <div>
+                <div class="detail-label">E-posta</div>
+                <div class="detail-value">${c.email}</div>
+              </div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+              </div>
+              <div>
+                <div class="detail-label">Telefon</div>
+                <div class="detail-value">${c.phone}</div>
+              </div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-icon">${sourceIcon(c.source)}</div>
+              <div>
+                <div class="detail-label">Kaynak</div>
+                <div class="detail-value">${c.source === 'linkedin' ? 'LinkedIn' : 'Direkt Başvuru'}</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="detail-section">
+            <div class="detail-section-title">Aktivite</div>
+            <div class="detail-row">
+              <div class="detail-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+              </div>
+              <div>
+                <div class="detail-label">Son Aktivite</div>
+                <div class="detail-value">${formatDate(c.lastActivity)}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="sidebar-footer">
+          <button type="button" class="btn-advance" id="btn-advance" ${!next ? 'disabled' : ''}>
+            ${next ? `Aşama Geçir → ${next.label}` : 'Son aşamada'}
+          </button>
+        </div>`;
+
+      if (next) {
+        document.getElementById('btn-advance').addEventListener('click', () => advanceStage(c.id));
+      }
+      const stageSelect = document.getElementById('stage-select');
+      if (stageSelect) {
+        stageSelect.addEventListener('change', () => {
+          moveCandidate(c.id, stageSelect.value);
+        });
+      }
+    }
+
+    function openSidebar() {
+      document.getElementById('sidebar').classList.add('open');
+      document.getElementById('overlay').classList.add('visible');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeSidebar() {
+      document.getElementById('sidebar').classList.remove('open');
+      document.getElementById('overlay').classList.remove('visible');
+      document.body.style.overflow = '';
+      selectedId = null;
+      document.getElementById('sidebar-content').innerHTML = `
+        <div class="sidebar-empty">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+          Detay görmek için bir aday kartına tıklayın
+        </div>`;
+      renderBoard();
+    }
+
+    function selectCandidate(id) {
+      selectedId = id;
+      const c = candidates.find(x => x.id === id);
+      if (!c) return;
+      renderBoard();
+      renderSidebar(c);
+      openSidebar();
+    }
+
+    function advanceStage(id) {
+      const c = candidates.find(x => x.id === id);
+      if (!c) return;
+      const next = getNextStage(c.stage);
+      if (!next) return;
+      moveCandidate(id, next.id);
+    }
+
+    document.getElementById('sidebar-close').addEventListener('click', closeSidebar);
+    document.getElementById('overlay').addEventListener('click', closeSidebar);
+
+    bindBoardScrollSpy();
+    renderBoard();
+  </script>
+</body>
+</html>
